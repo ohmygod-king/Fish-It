@@ -216,145 +216,150 @@ PlayerTab:CreateToggle({
 	end,
 })
 
--- ✅ ESP System
-local espEnabled = false
-local playerESPList = {}
-
--- 🔁 Update ESP tiap frame
-local RunService = game:GetService("RunService")
-local Camera = workspace.CurrentCamera
-
--- 🔧 Buat ESP untuk pemain
-local function createESPForPlayer(player)
-	if player == LocalPlayer then return end
-	if playerESPList[player] then return end
-
-	local espContainer = Instance.new("Folder")
-	espContainer.Name = "ESP_" .. player.Name
-	espContainer.Parent = game.CoreGui
-
-	local function onCharacterAdded(char)
-		task.wait(1) -- Tunggu HRP
-		local hrp = char:FindFirstChild("HumanoidRootPart")
-		local head = char:FindFirstChild("Head")
-		local humanoid = char:FindFirstChildOfClass("Humanoid")
-		if not hrp or not head or not humanoid then return end
-
-		-- 👤 Name Tag
-		local bill = Instance.new("BillboardGui")
-		bill.Adornee = head
-		bill.Size = UDim2.new(0, 200, 0, 50)
-		bill.StudsOffset = Vector3.new(0, 2.5, 0)
-		bill.AlwaysOnTop = true
-		bill.Name = "NameTag"
-		bill.Parent = espContainer
-
-		local label = Instance.new("TextLabel")
-		label.Size = UDim2.new(1, 0, 1, 0)
-		label.BackgroundTransparency = 1
-		label.TextColor3 = Color3.new(1, 1, 1)
-		label.TextStrokeTransparency = 0.5
-		label.Text = player.Name
-		label.Font = Enum.Font.GothamBold
-		label.TextScaled = true
-		label.Parent = bill
-
-		-- 🟩 Box ESP (via Drawing API)
-		local box = Drawing.new("Square")
-		box.Color = Color3.new(0, 1, 0)
-		box.Thickness = 2
-		box.Filled = false
-
-		-- 📍 Tracer (garis dari bawah layar)
-		local tracer = Drawing.new("Line")
-		tracer.Thickness = 1.5
-		tracer.Color = Color3.new(1, 1, 1)
-
-		playerESPList[player] = {
-			billboard = bill,
-			box = box,
-			tracer = tracer
-		}
-	end
-
-	if player.Character then
-		onCharacterAdded(player.Character)
-	end
-
-	player.CharacterAdded:Connect(onCharacterAdded)
-end
-
--- ❌ Hapus ESP
-local function removeESP()
-	for _, esp in pairs(playerESPList) do
-		if esp.billboard then esp.billboard:Destroy() end
-		if esp.box then esp.box:Remove() end
-		if esp.tracer then esp.tracer:Remove() end
-	end
-	playerESPList = {}
-end
-
--- 🚀 Toggle ESP
-PlayerTab:CreateToggle({
-	Name = "🧿 Enable ESP Player",
-	CurrentValue = false,
-	Callback = function(val)
-		espEnabled = val
-		if val then
-			for _, p in pairs(Players:GetPlayers()) do
-				if p ~= LocalPlayer then
-					createESPForPlayer(p)
-				end
-			end
-			NotifySuccess("ESP Diaktifkan", "Semua pemain kini terlihat dengan tag dan tracer.")
-		else
-			removeESP()
-			NotifyWarning("ESP Dimatikan", "Semua visual ESP telah dibersihkan.")
-		end
-	end,
-})
-
--- 🔁 Update Loop ESP
-RunService.RenderStepped:Connect(function()
-	if not espEnabled then return end
-
-	for player, esp in pairs(playerESPList) do
-		local char = player.Character
-		local hrp = char and char:FindFirstChild("HumanoidRootPart")
-		local hum = char and char:FindFirstChildOfClass("Humanoid")
-
-		if char and hrp and hum and hum.Health > 0 then
-			local pos, onscreen = Camera:WorldToViewportPoint(hrp.Position)
-			local scale = 1 / (hrp.Position - Camera.CFrame.Position).Magnitude * 100
-
-			-- Box
-			esp.box.Size = Vector2.new(35 * scale, 50 * scale)
-			esp.box.Position = Vector2.new(pos.X - esp.box.Size.X/2, pos.Y - esp.box.Size.Y/2)
-			esp.box.Visible = onscreen
-
-			-- Tracer
-			esp.tracer.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
-			esp.tracer.To = Vector2.new(pos.X, pos.Y)
-			esp.tracer.Visible = onscreen
-		else
-			if esp.box then esp.box.Visible = false end
-			if esp.tracer then esp.tracer.Visible = false end
-		end
-	end
-end)
-
--- 🔁 Auto Tambah ESP Untuk Player Baru
-Players.PlayerAdded:Connect(function(plr)
-	if espEnabled then
-		createESPForPlayer(plr)
-	end
-end)
-
 game:GetService("UserInputService").JumpRequest:Connect(function()
 	if ijump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
 		LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
 	end
 end)
+
+
+local RunService = game:GetService("RunService")
+local cam = workspace.CurrentCamera
+local espEnabled = false
+local espObjects = {}
+
+local boneJoints = {
+    {"Head", "UpperTorso"},
+    {"UpperTorso", "LowerTorso"},
+    {"UpperTorso", "LeftUpperArm"},
+    {"UpperTorso", "RightUpperArm"},
+    {"LeftUpperArm", "LeftLowerArm"},
+    {"RightUpperArm", "RightLowerArm"},
+    {"LeftLowerArm", "LeftHand"},
+    {"RightLowerArm", "RightHand"},
+    {"LowerTorso", "LeftUpperLeg"},
+    {"LowerTorso", "RightUpperLeg"},
+    {"LeftUpperLeg", "LeftLowerLeg"},
+    {"RightUpperLeg", "RightLowerLeg"},
+    {"LeftLowerLeg", "LeftFoot"},
+    {"RightLowerLeg", "RightFoot"},
+}
+
+-- Buat teks ESP kecil
+local function createText(color)
+	local text = Drawing.new("Text")
+	text.Size = 13
+	text.Center = true
+	text.Outline = true
+	text.Visible = true
+	text.Color = color or Color3.fromRGB(0, 255, 150)
+	text.Font = 2
+	return text
+end
+
+-- Buat bone ESP
+local function createLine()
+	local line = Drawing.new("Line")
+	line.Thickness = 1
+	line.Color = Color3.fromRGB(255, 255, 255)
+	line.Transparency = 1
+	line.Visible = false
+	return line
+end
+
+-- Toggle ESP GUI
+PlayerTab:CreateToggle({
+	Name = "👁️ Clean Bone ESP (Name + HP + Backpack)",
+	CurrentValue = false,
+	Callback = function(val)
+		espEnabled = val
+
+		if not val then
+			for _, esp in pairs(espObjects) do
+				for _, l in pairs(esp.Lines) do l:Remove() end
+				esp.NameText:Remove()
+				esp.InfoText:Remove()
+			end
+			espObjects = {}
+			NotifyWarning("ESP Dimatikan", "Semua elemen ESP telah dihapus.")
+		else
+			NotifySuccess("ESP Aktif", "Menampilkan info + tulang karakter lain.")
+		end
+	end,
+})
+
+-- RenderStepped loop
+RunService.RenderStepped:Connect(function()
+	if not espEnabled then return end
+
+	for _, player in pairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+			local char = player.Character
+			local humanoid = char:FindFirstChildOfClass("Humanoid")
+			local head = char:FindFirstChild("Head")
+
+			if not espObjects[player] then
+				local lines = {}
+				for _ = 1, #boneJoints do table.insert(lines, createLine()) end
+
+				espObjects[player] = {
+					Lines = lines,
+					NameText = createText(Color3.fromRGB(255, 255, 255)),
+					InfoText = createText(Color3.fromRGB(0, 255, 150)),
+				}
+			end
+
+			local esp = espObjects[player]
+			local index = 1
+
+			for _, joint in pairs(boneJoints) do
+				local partA = char:FindFirstChild(joint[1])
+				local partB = char:FindFirstChild(joint[2])
+				local line = esp.Lines[index]
+
+				if partA and partB then
+					local aPos, aVisible = cam:WorldToViewportPoint(partA.Position)
+					local bPos, bVisible = cam:WorldToViewportPoint(partB.Position)
+
+					if aVisible and bVisible then
+						line.From = Vector2.new(aPos.X, aPos.Y)
+						line.To = Vector2.new(bPos.X, bPos.Y)
+						line.Visible = true
+					else
+						line.Visible = false
+					end
+				else
+					line.Visible = false
+				end
+
+				index += 1
+			end
+
+			-- Update teks
+			local screenPos, visible = cam:WorldToViewportPoint(head.Position + Vector3.new(0, 2, 0))
+			if visible then
+				local nameText = esp.NameText
+				local infoText = esp.InfoText
+				nameText.Text = player.DisplayName
+				nameText.Position = Vector2.new(screenPos.X, screenPos.Y - 10)
+				nameText.Visible = true
+
+				local health = humanoid and math.floor(humanoid.Health) or 0
+				local max = humanoid and math.floor(humanoid.MaxHealth) or 0
+				local backpack = player:FindFirstChild("Backpack")
+				local items = backpack and #backpack:GetChildren() or 0
+
+				infoText.Text = string.format("❤️ %d/%d  🎒 %d", health, max, items)
+				infoText.Position = Vector2.new(screenPos.X, screenPos.Y + 5)
+				infoText.Visible = true
+			else
+				esp.NameText.Visible = false
+				esp.InfoText.Visible = false
+			end
+		end
+	end
+end)
+
 
 local floatPlatform = nil
 
@@ -527,7 +532,7 @@ local islandCodes = {
 	["06"] = { name = "Coral Reefs", position = Vector3.new(-3095, 1, 2177) },
 	["07"] = { name = "Crater Island", position = Vector3.new(968, 1, 4854) },
 	["08"] = { name = "Kohana", position = Vector3.new(-658, 3, 719) },
-	["09"] = { name "Winter Fest", position = Vector3.new(1611, 4, 3280) },
+	["09"] = { name = "Winter Fest", position = Vector3.new(1611, 4, 3280) },
 }
 
 
