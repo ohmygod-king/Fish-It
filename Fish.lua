@@ -156,7 +156,7 @@ MainTab:CreateToggle({
 
 						finishRemote:FireServer()
 					end)
-					task.wait(2.2)
+					task.wait(1.5)
 				end
 
 				ReplicatedStorage:WaitForChild("Packages"):WaitForChild("_Index")
@@ -221,77 +221,6 @@ game:GetService("UserInputService").JumpRequest:Connect(function()
 		LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
 	end
 end)
-
-
-PlayerTab:CreateInput({
-	Name = "🧍 Salin Avatar Pemain",
-	PlaceholderText = "Masukkan nama pemain",
-	RemoveTextAfterFocusLost = false,
-	Callback = function(targetName)
-		local target = Players:FindFirstChild(targetName)
-		if not target or not target.Character then
-			NotifyError("Gagal", "Pemain tidak ditemukan.")
-			return
-		end
-
-		local myChar = LocalPlayer.Character
-		local theirChar = target.Character
-
-		-- Salin BodyColors
-		local myBC = myChar:FindFirstChildOfClass("BodyColors")
-		local theirBC = theirChar:FindFirstChildOfClass("BodyColors")
-		if myBC and theirBC then
-			for _, prop in pairs({"HeadColor3", "LeftArmColor3", "LeftLegColor3", "RightArmColor3", "RightLegColor3", "TorsoColor3"}) do
-				myBC[prop] = theirBC[prop]
-			end
-		end
-
-		-- Salin Aksesori
-		for _, acc in ipairs(myChar:GetChildren()) do
-			if acc:IsA("Accessory") then
-				acc:Destroy()
-			end
-		end
-
-		for _, acc in ipairs(theirChar:GetChildren()) do
-			if acc:IsA("Accessory") then
-				acc:Clone().Parent = myChar
-			end
-		end
-
-		-- Salin Shirt & Pants
-		for _, item in ipairs(myChar:GetChildren()) do
-			if item:IsA("Shirt") or item:IsA("Pants") then
-				item:Destroy()
-			end
-		end
-
-		local shirt = theirChar:FindFirstChildOfClass("Shirt")
-		if shirt then
-			local new = shirt:Clone()
-			new.Parent = myChar
-		end
-
-		local pants = theirChar:FindFirstChildOfClass("Pants")
-		if pants then
-			local new = pants:Clone()
-			new.Parent = myChar
-		end
-
-		-- Salin Face (Decal di Head)
-		local myHead = myChar:FindFirstChild("Head")
-		local theirHead = theirChar:FindFirstChild("Head")
-		if myHead and theirHead then
-			local myFace = myHead:FindFirstChildOfClass("Decal")
-			local theirFace = theirHead:FindFirstChildOfClass("Decal")
-			if myFace and theirFace then
-				myFace.Texture = theirFace.Texture
-			end
-		end
-
-		NotifySuccess("Sukses", "Avatar dari " .. targetName .. " telah disalin.")
-	end,
-})
 
 
 local floatPlatform = nil
