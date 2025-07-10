@@ -152,11 +152,11 @@ MainTab:CreateToggle({
 							y = math.random(0, 1000) / 1000
 						end
 						miniGameRemote:InvokeServer(x, y)
-						task.wait(0.5)
+						task.wait(0.2)
 
 						finishRemote:FireServer()
 					end)
-					task.wait(1)
+					task.wait(0.3)
 				end
 
 				ReplicatedStorage:WaitForChild("Packages"):WaitForChild("_Index")
