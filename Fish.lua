@@ -223,136 +223,75 @@ game:GetService("UserInputService").JumpRequest:Connect(function()
 end)
 
 
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
-
-local espEnabled = false
-local espObjects = {}
-
--- Joint koneksi berdasarkan struktur karakter sederhana
-local bones = {
-    {"Head", "Torso"},
-    {"Torso", "LeftArm"},
-    {"Torso", "RightArm"},
-    {"Torso", "LeftLeg"},
-    {"Torso", "RightLeg"},
-}
-
-local function createText(color)
-	local text = Drawing.new("Text")
-	text.Size = 13
-	text.Center = true
-	text.Outline = true
-	text.Visible = true
-	text.Color = color or Color3.fromRGB(255, 255, 255)
-	text.Font = 2
-	return text
-end
-
-local function createLine()
-	local line = Drawing.new("Line")
-	line.Thickness = 1
-	line.Color = Color3.fromRGB(255, 255, 255)
-	line.Transparency = 1
-	line.Visible = false
-	return line
-end
-
--- 🧠 ESP Toggle
-PlayerTab:CreateToggle({
-	Name = "👁️ Clean ESP (Bone + ID + Distance + HP)",
-	CurrentValue = false,
-	Callback = function(val)
-		espEnabled = val
-
-		if not val then
-			for _, esp in pairs(espObjects) do
-				for _, l in pairs(esp.Lines) do l:Remove() end
-				esp.Name:Remove()
-				esp.Info:Remove()
-			end
-			espObjects = {}
-			NotifyWarning("ESP Dimatikan", "Semua elemen ESP telah dihapus.")
-		else
-			NotifySuccess("ESP Aktif", "Menampilkan tulang + ID + Jarak + Darah.")
+PlayerTab:CreateInput({
+	Name = "🧍 Salin Avatar Pemain",
+	PlaceholderText = "Masukkan nama pemain",
+	RemoveTextAfterFocusLost = false,
+	Callback = function(targetName)
+		local target = Players:FindFirstChild(targetName)
+		if not target or not target.Character then
+			NotifyError("Gagal", "Pemain tidak ditemukan.")
+			return
 		end
+
+		local myChar = LocalPlayer.Character
+		local theirChar = target.Character
+
+		-- Salin BodyColors
+		local myBC = myChar:FindFirstChildOfClass("BodyColors")
+		local theirBC = theirChar:FindFirstChildOfClass("BodyColors")
+		if myBC and theirBC then
+			for _, prop in pairs({"HeadColor3", "LeftArmColor3", "LeftLegColor3", "RightArmColor3", "RightLegColor3", "TorsoColor3"}) do
+				myBC[prop] = theirBC[prop]
+			end
+		end
+
+		-- Salin Aksesori
+		for _, acc in ipairs(myChar:GetChildren()) do
+			if acc:IsA("Accessory") then
+				acc:Destroy()
+			end
+		end
+
+		for _, acc in ipairs(theirChar:GetChildren()) do
+			if acc:IsA("Accessory") then
+				acc:Clone().Parent = myChar
+			end
+		end
+
+		-- Salin Shirt & Pants
+		for _, item in ipairs(myChar:GetChildren()) do
+			if item:IsA("Shirt") or item:IsA("Pants") then
+				item:Destroy()
+			end
+		end
+
+		local shirt = theirChar:FindFirstChildOfClass("Shirt")
+		if shirt then
+			local new = shirt:Clone()
+			new.Parent = myChar
+		end
+
+		local pants = theirChar:FindFirstChildOfClass("Pants")
+		if pants then
+			local new = pants:Clone()
+			new.Parent = myChar
+		end
+
+		-- Salin Face (Decal di Head)
+		local myHead = myChar:FindFirstChild("Head")
+		local theirHead = theirChar:FindFirstChild("Head")
+		if myHead and theirHead then
+			local myFace = myHead:FindFirstChildOfClass("Decal")
+			local theirFace = theirHead:FindFirstChildOfClass("Decal")
+			if myFace and theirFace then
+				myFace.Texture = theirFace.Texture
+			end
+		end
+
+		NotifySuccess("Sukses", "Avatar dari " .. targetName .. " telah disalin.")
 	end,
 })
-
-RunService.RenderStepped:Connect(function()
-	if not espEnabled then return end
-
-	for _, player in pairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-			local char = player.Character
-			local hum = char:FindFirstChildOfClass("Humanoid")
-			local hrp = char:FindFirstChild("Torso")
-
-			if not espObjects[player] then
-				local lines = {}
-				for _ = 1, #bones do table.insert(lines, createLine()) end
-
-				espObjects[player] = {
-					Lines = lines,
-					Name = createText(Color3.fromRGB(255, 255, 255)),
-					Info = createText(Color3.fromRGB(0, 255, 150)),
-				}
-			end
-
-			local esp = espObjects[player]
-			local index = 1
-
-			for _, bone in ipairs(bones) do
-				local partA = char:FindFirstChild(bone[1])
-				local partB = char:FindFirstChild(bone[2])
-				local line = esp.Lines[index]
-
-				if partA and partB then
-					local aPos, aVis = Camera:WorldToViewportPoint(partA.Position)
-					local bPos, bVis = Camera:WorldToViewportPoint(partB.Position)
-
-					if aVis and bVis then
-						line.From = Vector2.new(aPos.X, aPos.Y)
-						line.To = Vector2.new(bPos.X, bPos.Y)
-						line.Visible = true
-					else
-						line.Visible = false
-					end
-				else
-					line.Visible = false
-				end
-
-				index += 1
-			end
-
-			-- Text Info
-			local head = char:FindFirstChild("Head")
-			if head then
-				local screenPos, visible = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 1.8, 0))
-				local distance = (Camera.CFrame.Position - head.Position).Magnitude
-
-				if visible then
-					local userId = player.UserId
-					local health = hum and math.floor(hum.Health) or 0
-					local maxHP = hum and math.floor(hum.MaxHealth) or 0
-
-					esp.Name.Text = player.DisplayName
-					esp.Name.Position = Vector2.new(screenPos.X, screenPos.Y - 10)
-					esp.Name.Visible = true
-
-					esp.Info.Text = string.format("🆔 %d | ❤️ %d/%d | 📏 %.1fm", userId, health, maxHP, distance)
-					esp.Info.Position = Vector2.new(screenPos.X, screenPos.Y + 5)
-					esp.Info.Visible = true
-				else
-					esp.Name.Visible = false
-					esp.Info.Visible = false
-				end
-			end
-		end
-	end
-end)
 
 
 local floatPlatform = nil
