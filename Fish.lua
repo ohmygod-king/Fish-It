@@ -224,40 +224,33 @@ end)
 
 
 local RunService = game:GetService("RunService")
-local cam = workspace.CurrentCamera
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
 local espEnabled = false
 local espObjects = {}
 
-local boneJoints = {
-    {"Head", "UpperTorso"},
-    {"UpperTorso", "LowerTorso"},
-    {"UpperTorso", "LeftUpperArm"},
-    {"UpperTorso", "RightUpperArm"},
-    {"LeftUpperArm", "LeftLowerArm"},
-    {"RightUpperArm", "RightLowerArm"},
-    {"LeftLowerArm", "LeftHand"},
-    {"RightLowerArm", "RightHand"},
-    {"LowerTorso", "LeftUpperLeg"},
-    {"LowerTorso", "RightUpperLeg"},
-    {"LeftUpperLeg", "LeftLowerLeg"},
-    {"RightUpperLeg", "RightLowerLeg"},
-    {"LeftLowerLeg", "LeftFoot"},
-    {"RightLowerLeg", "RightFoot"},
+-- Joint koneksi berdasarkan struktur karakter sederhana
+local bones = {
+    {"Head", "Torso"},
+    {"Torso", "LeftArm"},
+    {"Torso", "RightArm"},
+    {"Torso", "LeftLeg"},
+    {"Torso", "RightLeg"},
 }
 
--- Buat teks ESP kecil
 local function createText(color)
 	local text = Drawing.new("Text")
 	text.Size = 13
 	text.Center = true
 	text.Outline = true
 	text.Visible = true
-	text.Color = color or Color3.fromRGB(0, 255, 150)
+	text.Color = color or Color3.fromRGB(255, 255, 255)
 	text.Font = 2
 	return text
 end
 
--- Buat bone ESP
 local function createLine()
 	local line = Drawing.new("Line")
 	line.Thickness = 1
@@ -267,9 +260,9 @@ local function createLine()
 	return line
 end
 
--- Toggle ESP GUI
+-- 🧠 ESP Toggle
 PlayerTab:CreateToggle({
-	Name = "👁️ Clean Bone ESP (Name + HP + Backpack)",
+	Name = "👁️ Clean ESP (Bone + ID + Distance + HP)",
 	CurrentValue = false,
 	Callback = function(val)
 		espEnabled = val
@@ -277,51 +270,50 @@ PlayerTab:CreateToggle({
 		if not val then
 			for _, esp in pairs(espObjects) do
 				for _, l in pairs(esp.Lines) do l:Remove() end
-				esp.NameText:Remove()
-				esp.InfoText:Remove()
+				esp.Name:Remove()
+				esp.Info:Remove()
 			end
 			espObjects = {}
 			NotifyWarning("ESP Dimatikan", "Semua elemen ESP telah dihapus.")
 		else
-			NotifySuccess("ESP Aktif", "Menampilkan info + tulang karakter lain.")
+			NotifySuccess("ESP Aktif", "Menampilkan tulang + ID + Jarak + Darah.")
 		end
 	end,
 })
 
--- RenderStepped loop
 RunService.RenderStepped:Connect(function()
 	if not espEnabled then return end
 
 	for _, player in pairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
 			local char = player.Character
-			local humanoid = char:FindFirstChildOfClass("Humanoid")
-			local head = char:FindFirstChild("Head")
+			local hum = char:FindFirstChildOfClass("Humanoid")
+			local hrp = char:FindFirstChild("Torso")
 
 			if not espObjects[player] then
 				local lines = {}
-				for _ = 1, #boneJoints do table.insert(lines, createLine()) end
+				for _ = 1, #bones do table.insert(lines, createLine()) end
 
 				espObjects[player] = {
 					Lines = lines,
-					NameText = createText(Color3.fromRGB(255, 255, 255)),
-					InfoText = createText(Color3.fromRGB(0, 255, 150)),
+					Name = createText(Color3.fromRGB(255, 255, 255)),
+					Info = createText(Color3.fromRGB(0, 255, 150)),
 				}
 			end
 
 			local esp = espObjects[player]
 			local index = 1
 
-			for _, joint in pairs(boneJoints) do
-				local partA = char:FindFirstChild(joint[1])
-				local partB = char:FindFirstChild(joint[2])
+			for _, bone in ipairs(bones) do
+				local partA = char:FindFirstChild(bone[1])
+				local partB = char:FindFirstChild(bone[2])
 				local line = esp.Lines[index]
 
 				if partA and partB then
-					local aPos, aVisible = cam:WorldToViewportPoint(partA.Position)
-					local bPos, bVisible = cam:WorldToViewportPoint(partB.Position)
+					local aPos, aVis = Camera:WorldToViewportPoint(partA.Position)
+					local bPos, bVis = Camera:WorldToViewportPoint(partB.Position)
 
-					if aVisible and bVisible then
+					if aVis and bVis then
 						line.From = Vector2.new(aPos.X, aPos.Y)
 						line.To = Vector2.new(bPos.X, bPos.Y)
 						line.Visible = true
@@ -335,26 +327,28 @@ RunService.RenderStepped:Connect(function()
 				index += 1
 			end
 
-			-- Update teks
-			local screenPos, visible = cam:WorldToViewportPoint(head.Position + Vector3.new(0, 2, 0))
-			if visible then
-				local nameText = esp.NameText
-				local infoText = esp.InfoText
-				nameText.Text = player.DisplayName
-				nameText.Position = Vector2.new(screenPos.X, screenPos.Y - 10)
-				nameText.Visible = true
+			-- Text Info
+			local head = char:FindFirstChild("Head")
+			if head then
+				local screenPos, visible = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 1.8, 0))
+				local distance = (Camera.CFrame.Position - head.Position).Magnitude
 
-				local health = humanoid and math.floor(humanoid.Health) or 0
-				local max = humanoid and math.floor(humanoid.MaxHealth) or 0
-				local backpack = player:FindFirstChild("Backpack")
-				local items = backpack and #backpack:GetChildren() or 0
+				if visible then
+					local userId = player.UserId
+					local health = hum and math.floor(hum.Health) or 0
+					local maxHP = hum and math.floor(hum.MaxHealth) or 0
 
-				infoText.Text = string.format("❤️ %d/%d  🎒 %d", health, max, items)
-				infoText.Position = Vector2.new(screenPos.X, screenPos.Y + 5)
-				infoText.Visible = true
-			else
-				esp.NameText.Visible = false
-				esp.InfoText.Visible = false
+					esp.Name.Text = player.DisplayName
+					esp.Name.Position = Vector2.new(screenPos.X, screenPos.Y - 10)
+					esp.Name.Visible = true
+
+					esp.Info.Text = string.format("🆔 %d | ❤️ %d/%d | 📏 %.1fm", userId, health, maxHP, distance)
+					esp.Info.Position = Vector2.new(screenPos.X, screenPos.Y + 5)
+					esp.Info.Visible = true
+				else
+					esp.Name.Visible = false
+					esp.Info.Visible = false
+				end
 			end
 		end
 	end
