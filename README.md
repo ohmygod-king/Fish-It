@@ -1,6 +1,6 @@
 # 🎣 QuietXDev GUI | Fish It
 > Final Version | Auto Fish, Teleport, Player Tools  
-> 💻 Developed by [ramaa](https://github.com/ohmygod-king)
+> 💻 Developed by [Prince](https://github.com/ohmygod-king)
 
 ---
 
