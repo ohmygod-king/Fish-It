@@ -40,7 +40,7 @@ local Window = Rayfield:CreateWindow({
 	LoadingTitle = "QuietXDev AutoFish",
 	LoadingSubtitle = "by Prince",
 	ConfigurationSaving = {
-		Enabled = true,
+		Enabled = false,
 		FolderName = "QuietXFishIt",
 		FileName = "AutoFishSave"
 	},
@@ -87,22 +87,22 @@ local DevTab = Window:CreateTab("Developer", "airplay")
 DevTab:CreateParagraph({
 	Title = "QuietXDev by Prince",
 	Content = [[
-Terima kasih telah menggunakan script ini!
+Thanks For Using This Script!
 
-Kontak Developer:
+Developer :
 - Discord: discord.gg/2aMDrb92kf
 - Instagram: @quietxdev
 - GitHub: github.com/ohmygod-king
 
-Tetap support kami agar terus berkembang!
-]]
+Keep supporting us!
+	]]
 })
 
 DevTab:CreateButton({
 	Name = "Discord Server",
 	Callback = function()
 		setclipboard("https://discord.gg/2aMDrb92kf")
-		NotifyInfo("Link Discord", "Link telah disalin ke clipboard!")
+		NotifyInfo("Link Discord", "Link has been copied to clipboard!")
 	end
 })
 
@@ -110,7 +110,7 @@ DevTab:CreateButton({
 	Name = "Instagram",
 	Callback = function()
 		setclipboard("https://instagram.com/quietxdev")
-		NotifyInfo("Link Instagram", "Link telah disalin ke clipboard!")
+		NotifyInfo("Link Instagram", "Link has been copied to clipboard!")
 	end
 })
 
@@ -118,7 +118,7 @@ DevTab:CreateButton({
 	Name = "GitHub",
 	Callback = function()
 		setclipboard("https://github.com/ohmygod-king")
-		NotifyInfo("Link GitHub", "Link telah disalin ke clipboard!")
+		NotifyInfo("Link GitHub", "Link has been copied to clipboard!")
 	end
 })
 
@@ -194,12 +194,12 @@ MainTab:CreateButton({
 
 MainTab:CreateButton({
 	Name = "Sell All Fishes (Beta)",
-	Info = "Harus dekat dengan seller ",
+	Info = "Must be close to the seller",
 	Callback = function()
 		local sellRemote = net:WaitForChild("RF/SellAllItems")
 		pcall(function()
 			sellRemote:InvokeServer()
-			NotifySuccess("Sold!", "Semua ikan berhasil dijual!")
+			NotifySuccess("Sold!", "All the fish were sold successfully!")
 		end)
 	end,
 })
@@ -256,7 +256,7 @@ PlayerTab:CreateToggle({
 
 			Rayfield:Notify({
 				Title = "☁️ Float Enabled",
-				Content = "Fitur ini berhasil diaktifkan!",
+				Content = "This feature has been successfully activated!",
 				Duration = 3
 			})
 		else
@@ -266,7 +266,7 @@ PlayerTab:CreateToggle({
 			end
 			Rayfield:Notify({
 				Title = "☁️ Float Disabled",
-				Content = "Fitur dinonaktifkan",
+				Content = "Feature disabled",
 				Duration = 2
 			})
 		end
@@ -287,7 +287,7 @@ PlayerTab:CreateToggle({
 		universalNoclip = val
 
 		if val then
-			NotifySuccess("Universal Noclip Aktif", "Kamu & kendaraan bisa menembus semua objek.")
+			NotifySuccess("Universal Noclip Active", "You & your vehicle can penetrate all objects.")
 		else
 
 			for part, state in pairs(originalCollisionState) do
@@ -296,7 +296,7 @@ PlayerTab:CreateToggle({
 				end
 			end
 			originalCollisionState = {}
-			NotifyWarning("Universal Noclip Dimatikan", "Semua collision dikembalikan ke semula.")
+			NotifyWarning("Universal Noclip Disabled", "All collisions are returned to their original state.")
 		end
 	end,
 })
@@ -365,11 +365,11 @@ local TeleportTab = Window:CreateTab("Teleport", "step-forward"
 )
 
 TeleportTab:CreateParagraph({
-	Title = "Panduan Teleport",
+	Title = "Teleport Guide",
 	Content = [[
-Masukkan kode atau nama sesuai target:
+Enter the code or name according to the target:
 
-📍 Kode Pulau (Gunakan input angka):
+📍 Island Code (Use numeric input):
   01 = Weather Machine
   02 = Esoteric Depths
   03 = Tropical Grove
@@ -380,8 +380,8 @@ Masukkan kode atau nama sesuai target:
   08 = Kohana
   09 = Winter Fest
 
-🚶 Untuk pemain, ketik nama pengguna secara manual.
-Pastikan nama sesuai yang tampil di leaderboard.
+🚶 For players, type the username manually.
+Make sure the name matches what appears on the leaderboard.
 ]]
 })
 
@@ -399,8 +399,8 @@ local islandCodes = {
 
 
 TeleportTab:CreateInput({
-	Name = "Teleport ke Pulau",
-	PlaceholderText = "Contoh: 01",
+	Name = "Teleport to the Island",
+	PlaceholderText = "Example: 01",
 	RemoveTextAfterFocusLost = false,
 	Callback = function(input)
 		local data = islandCodes[input]
@@ -408,19 +408,19 @@ TeleportTab:CreateInput({
 			local success, err = pcall(function()
 				local charFolder = workspace:WaitForChild("Characters", 5)
 				local char = charFolder:FindFirstChild(LocalPlayer.Name)
-				if not char then error("Character tidak ditemukan") end
+				if not char then error("Character not found") end
 				local hrp = char:FindFirstChild("HumanoidRootPart") or char:WaitForChild("HumanoidRootPart", 3)
-				if not hrp then error("HRP tidak ditemukan") end
+				if not hrp then error("HRP not found") end
 				hrp.CFrame = CFrame.new(data.position + Vector3.new(0, 5, 0))
 			end)
 
 			if success then
-				NotifySuccess("Teleport Berhasil", "Kamu telah teleport ke " .. data.name .. "!")
+				NotifySuccess("Teleport Successful", "You have teleported to " .. data.name .. "!")
 			else
-				NotifyError("Gagal Teleport", tostring(err))
+				NotifyError("Teleport Failed", tostring(err))
 			end
 		else
-			NotifyError("Kode Tidak Valid", "Gunakan kode dari 01 hingga 09 sesuai daftar.")
+			NotifyError("Invalid Code", "Use codes from 01 to 09 according to the list.")
 		end
 	end,
 })
@@ -451,14 +451,14 @@ local function getPlayer(name)
 end
 
 TeleportTab:CreateInput({
-    Name = "Nama Pemain",
-    PlaceholderText = "Contoh: Prince",
+    Name = "Player Name",
+    PlaceholderText = "Example: Prince",
     RemoveTextAfterFocusLost = false,
     Callback = function(text)
         for _, p in pairs(Players:GetPlayers()) do
             if p.DisplayName:lower() == text:lower() then
                 teleportToPlayerExact(p.Name)
-                NotifySuccess("Teleport Berhasil", "Berhasil Teleport ke " .. p.displayName .. "!")
+                NotifySuccess("Teleport Successfully", "Successfully Teleported to " .. p.displayName .. "!")
                 break
             end
         end
